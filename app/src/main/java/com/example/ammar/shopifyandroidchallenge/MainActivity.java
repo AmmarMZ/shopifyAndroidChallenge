@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,21 +40,20 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivity
 {
-
-
     private GridView imageGrid;
+    //stores all the bitmaps, is referenced when querying but is never changed itself
     private ArrayList<Bitmap> bitmapList;
+    //stores the queried images
     private ArrayList<Bitmap> queriedBitmapList;
+    //stores all the picture details
     private ArrayList<JSONObject> details = new ArrayList<>();
-    private ArrayList<JSONObject> queryList = new ArrayList<>();
-
-
 
     //way to reference the json file after the thread is finished
     String jsonItems;
     private Menu menu;
 
     //image adapter from https://www.thepolyglotdeveloper.com/2015/05/make-a-gallery-like-image-grid-using-native-android/
+    //used in XML file
     public class ImageAdapter extends BaseAdapter
     {
         private Context context;
@@ -189,13 +190,17 @@ public class MainActivity extends AppCompatActivity
         return result;
     }
 
+    //adapter for custom images in gridView
     private final class MyAdapter extends BaseAdapter
     {
         private final List<Item> mItems = new ArrayList<>();
         private final LayoutInflater mInflater;
+        //items and their details
         ArrayList<JSONObject> items;
+        //the associated items bitmaps
         private ArrayList<Bitmap> uploadedBitmapList;
 
+        //adding grid items to grid
         public MyAdapter(Context context, ArrayList<JSONObject> items, ArrayList<Bitmap> bitmapList)
         {
             this.items = items;
@@ -231,7 +236,9 @@ public class MainActivity extends AppCompatActivity
             TextView name;
             TextView title;
 
-            if (v == null) {
+            //initializing widgets to their associated values
+            if (v == null)
+            {
                 v = mInflater.inflate(R.layout.grid_item, viewGroup, false);
                 v.setTag(R.id.picture, v.findViewById(R.id.picture));
                 v.setTag(R.id.text, v.findViewById(R.id.text));
@@ -275,12 +282,13 @@ public class MainActivity extends AppCompatActivity
 
             return v;
         }
+        //opens up a bigger picture and details of the item selected
         public void startIntent(int x)
         {
             Intent intent = new Intent(getBaseContext(),DynamicImage.class);
             JSONObject temp = items.get(x);
             intent.putExtra("title",(String)temp.get("title"));
-            intent.putExtra("bitmap",bitmapList.get(x));
+            intent.putExtra("bitmap",this.uploadedBitmapList.get(x));
             intent.putExtra("price",(String) temp.get("price"));
             intent.putExtra("pID",(Long) temp.get("product_id"));
             intent.putExtra("weight",(Double) temp.get("weight"));
@@ -309,11 +317,13 @@ public class MainActivity extends AppCompatActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //get JSON from URL using threading/httpRequest
         JSONRunnable myRunnable = new JSONRunnable("https://shopicruit.myshopify.com/admin/products.json?page=1&access_token=c32313df0d0ef512ca64d5b336a0d7c6");
         Thread thread = new Thread(myRunnable);
         thread.start();
         while(thread.isAlive())
-        {/*wait for thread to finish */}
+        { }
         JSONParser jsonParser = new JSONParser();
         ArrayList<String> srcs = new ArrayList<>();
         try
@@ -359,6 +369,7 @@ public class MainActivity extends AppCompatActivity
         this.bitmapList = new ArrayList<>();
 
         ImageRunnable imageRunnable = new ImageRunnable(srcs);
+        //thread1 adds the pictures to the gridView async so that they are updated in realTime without having to manually refresh
         Thread thread1 = new Thread(imageRunnable);
         thread1.start();
         while(thread1.isAlive())
@@ -375,6 +386,7 @@ public class MainActivity extends AppCompatActivity
         SearchManager searchManager = (SearchManager) getSystemService(SEARCH_SERVICE);
         searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
 
+        //set query listener for searchView
         searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query)
@@ -382,6 +394,7 @@ public class MainActivity extends AppCompatActivity
                 return true;
             }
 
+            //search updates as user types, no need to click enter
             @Override
             public boolean onQueryTextChange(String newText)
             {
@@ -399,6 +412,7 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
+    //updates the bitmap and returns the details of the items queried
     public ArrayList<JSONObject> queryList(String query)
     {
         ArrayList<JSONObject> meetsQuery = new ArrayList<>();

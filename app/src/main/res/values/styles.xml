@@ -11,4 +11,10 @@
     <string name="app_label"> Search Feature</string>
     <string name="search_hint">Search Fruit</string>
     <string name="search_view">Enter search</string>
+
+
+    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+
 </resources>
