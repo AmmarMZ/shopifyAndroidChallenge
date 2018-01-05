@@ -1,6 +1,7 @@
 package com.example.ammar.shopifyandroidchallenge;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.app.AppCompatActivity;
@@ -178,9 +179,11 @@ public class MainActivity extends AppCompatActivity
     private final class MyAdapter extends BaseAdapter {
         private final List<Item> mItems = new ArrayList<>();
         private final LayoutInflater mInflater;
+        ArrayList<JSONObject> items;
 
         public MyAdapter(Context context, ArrayList<JSONObject> items)
         {
+            this.items = items;
             mInflater = LayoutInflater.from(context);
             for (int i = 0; i < items.size(); i++)
             {
@@ -208,7 +211,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
             View v = view;
-            ImageView picture;
+            final ImageView picture;
             TextView name;
             TextView title;
 
@@ -224,13 +227,51 @@ public class MainActivity extends AppCompatActivity
             title = (TextView) v.getTag(R.id.title);
 
             Item item = getItem(i);
-
+            final int x = i;
             picture.setImageBitmap(item.drawableId);
             name.setText(item.name);
             title.setText(item.title);
 
+            picture.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    startIntent(x);
+                }
+            });
+            name.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                  startIntent(x);
+                }
+            });
+            title.setOnClickListener(new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    startIntent(x);
+                }
+            });
 
             return v;
+        }
+        public void startIntent(int x)
+        {
+
+            Intent intent = new Intent(getBaseContext(),DynamicImage.class);
+            JSONObject temp = items.get(x);
+            intent.putExtra("title",(String)temp.get("title"));
+            intent.putExtra("bitmap",bitmapList.get(x));
+            intent.putExtra("price",(String) temp.get("price"));
+            intent.putExtra("pID",(Long) temp.get("product_id"));
+            intent.putExtra("weight",(Double) temp.get("weight"));
+            intent.putExtra("stock",(Long) temp.get("inventory_quantity"));
+            System.out.println(temp.get("product_ID"));
+            startActivity(intent);
         }
 
         private class Item {
@@ -284,6 +325,7 @@ public class MainActivity extends AppCompatActivity
                     tempDetails.put("weight",variant1.get("weight"));
                     tempDetails.put("price",variant1.get("price"));
                     tempDetails.put("title",temp.get("title"));
+                    tempDetails.put("inventory_quantity",variant1.get("inventory_quantity"));
                     //src is added here to act as an FK between details and the imageView
                     tempDetails.put("src",tempObj.get("src"));
                     details.add(tempDetails);
@@ -306,5 +348,6 @@ public class MainActivity extends AppCompatActivity
         while(thread1.isAlive())
         { /*wait for thread1 to finish */}
         this.imageGrid.setAdapter(new MyAdapter(getBaseContext(),details));
+
     }
 }
