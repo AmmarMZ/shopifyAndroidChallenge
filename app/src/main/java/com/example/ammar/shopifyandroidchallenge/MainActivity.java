@@ -1,18 +1,24 @@
 package com.example.ammar.shopifyandroidchallenge;
 
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -33,11 +39,18 @@ import javax.net.ssl.HttpsURLConnection;
 public class MainActivity extends AppCompatActivity
 {
 
+
     private GridView imageGrid;
     private ArrayList<Bitmap> bitmapList;
+    private ArrayList<Bitmap> queriedBitmapList;
+    private ArrayList<JSONObject> details = new ArrayList<>();
+    private ArrayList<JSONObject> queryList = new ArrayList<>();
+
+
 
     //way to reference the json file after the thread is finished
     String jsonItems;
+    private Menu menu;
 
     //image adapter from https://www.thepolyglotdeveloper.com/2015/05/make-a-gallery-like-image-grid-using-native-android/
     public class ImageAdapter extends BaseAdapter
@@ -176,19 +189,22 @@ public class MainActivity extends AppCompatActivity
         return result;
     }
 
-    private final class MyAdapter extends BaseAdapter {
+    private final class MyAdapter extends BaseAdapter
+    {
         private final List<Item> mItems = new ArrayList<>();
         private final LayoutInflater mInflater;
         ArrayList<JSONObject> items;
+        private ArrayList<Bitmap> uploadedBitmapList;
 
-        public MyAdapter(Context context, ArrayList<JSONObject> items)
+        public MyAdapter(Context context, ArrayList<JSONObject> items, ArrayList<Bitmap> bitmapList)
         {
             this.items = items;
+            this.uploadedBitmapList = bitmapList;
             mInflater = LayoutInflater.from(context);
             for (int i = 0; i < items.size(); i++)
             {
                 JSONObject temp = items.get(i);
-                mItems.add(new Item((String)temp.get("title"),bitmapList.get(i),(String)temp.get("price")));
+                mItems.add(new Item((String)temp.get("title"),this.uploadedBitmapList.get(i),(String)temp.get("price")));
             }
         }
 
@@ -261,7 +277,6 @@ public class MainActivity extends AppCompatActivity
         }
         public void startIntent(int x)
         {
-
             Intent intent = new Intent(getBaseContext(),DynamicImage.class);
             JSONObject temp = items.get(x);
             intent.putExtra("title",(String)temp.get("title"));
@@ -274,12 +289,14 @@ public class MainActivity extends AppCompatActivity
             startActivity(intent);
         }
 
-        private class Item {
+        private class Item
+        {
             public final String name;
             public final String title;
             public final Bitmap drawableId;
 
-            Item(String name, Bitmap drawableId, String title) {
+            Item(String name, Bitmap drawableId, String title)
+            {
                 this.name = "$" + title;
                 this.drawableId = drawableId;
                 this.title =  name;
@@ -299,7 +316,6 @@ public class MainActivity extends AppCompatActivity
         {/*wait for thread to finish */}
         JSONParser jsonParser = new JSONParser();
         ArrayList<String> srcs = new ArrayList<>();
-        ArrayList<JSONObject> details = new ArrayList<>();
         try
         {
             //stores the srcs for pictures
@@ -347,7 +363,59 @@ public class MainActivity extends AppCompatActivity
         thread1.start();
         while(thread1.isAlive())
         { /*wait for thread1 to finish */}
-        this.imageGrid.setAdapter(new MyAdapter(getBaseContext(),details));
-
+        this.imageGrid.setAdapter(new MyAdapter(getBaseContext(),details,bitmapList));
     }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.options_menu, menu);
+
+        final android.support.v7.widget.SearchView searchView = (android.support.v7.widget.SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.action_search));
+        SearchManager searchManager = (SearchManager) getSystemService(SEARCH_SERVICE);
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+
+        searchView.setOnQueryTextListener(new android.support.v7.widget.SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query)
+            {
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText)
+            {
+                if (newText.length() == 0)
+                {
+                   imageGrid.setAdapter(new MyAdapter(getBaseContext(),details,bitmapList));
+                    return true;
+                }
+                ArrayList<JSONObject> newList = queryList(newText);
+                imageGrid.setAdapter(new MyAdapter(getBaseContext(),newList,queriedBitmapList));
+                return true;
+            }
+        });
+
+        return true;
+    }
+
+    public ArrayList<JSONObject> queryList(String query)
+    {
+        ArrayList<JSONObject> meetsQuery = new ArrayList<>();
+        queriedBitmapList = new ArrayList<>();
+        query = query.toLowerCase();
+        for (int i = 0; i < details.size(); i ++)
+        {
+            JSONObject temp = details.get(i);
+            String name = (String) temp.get("title");
+            name = name.toLowerCase();
+            if (name.contains(query))
+            {
+                meetsQuery.add(temp);
+                queriedBitmapList.add(bitmapList.get(i));
+            }
+        }
+        return meetsQuery;
+    }
+
 }

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">ShopifyAndroidChallenge</string>
+    <string name="queryHint">Search by name...</string>
 </resources>
